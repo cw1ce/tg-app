@@ -200,8 +200,22 @@
         }
 
         function orderProduct(title) {
-            const msg = encodeURIComponent(`Здравствуйте! Меня интересует товар: "${title}".`);
-            tg.openTelegramLink(`https://t.me/${manager_AVTO_TUN}?text=${msg}`);
+    const msg = encodeURIComponent(`Здравствуйте! Меня интересует товар: "${title}". Расскажите про наличие.`);
+    const directUrl = `https://t.me/${MANAGER_USERNAME}?text=${msg}`;
+
+    // 1. Попытка открыть ссылку через SDK Telegram WebApp
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+        try {
+            window.Telegram.WebApp.openTelegramLink(directUrl);
+            return;
+        } catch (e) {
+            console.error("Ошибка при вызове openTelegramLink:", e);
+        }
+    }
+
+    // 2. Резервный вариант для мобильных устройств (открывает напрямую в приложении)
+    window.location.href = directUrl;
+}
         }
 
         // Первоначальная инициализация
