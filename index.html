@@ -11,8 +11,51 @@
             color: var(--tg-theme-text-color, #000000);
             padding: 12px;
             margin: 0;
+            box-sizing: border-box;
         }
-        h2 { text-align: center; }
+        h2 { text-align: center; margin-top: 5px; }
+
+        /* Поле поиска */
+        .search-box {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background-color: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+        }
+
+        /* Кнопки категорий */
+        .categories-container {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            scrollbar-width: none; /* Скрываем скроллбар в Firefox */
+        }
+        .categories-container::-webkit-scrollbar { display: none; } /* Скрываем скроллбар в Chrome/Safari */
+
+        .category-btn {
+            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            color: var(--tg-theme-text-color, #333);
+            border: 1px solid var(--tg-theme-hint-color, #ddd);
+            padding: 8px 14px;
+            border-radius: 20px;
+            white-space: nowrap;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .category-btn.active {
+            background-color: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border-color: var(--tg-theme-button-color, #2481cc);
+        }
+
+        /* Карточки товаров */
         .product-card {
             border: 1px solid var(--tg-theme-hint-color, #ddd);
             border-radius: 10px;
@@ -26,9 +69,11 @@
             object-fit: cover;
             border-radius: 8px;
         }
-        .product-title { margin: 10px 0 5px; font-size: 16px; }
-        .product-price { font-weight: bold; color: #2e7d32; margin-bottom: 10px; }
-        button {
+        .product-title { margin: 10px 0 5px; font-size: 16px; font-weight: bold; }
+        .product-category { font-size: 12px; color: var(--tg-theme-hint-color, #888); margin-bottom: 5px; }
+        .product-price { font-weight: bold; color: #2e7d32; margin-bottom: 10px; font-size: 15px; }
+        
+        .order-btn {
             background-color: var(--tg-theme-button-color, #2481cc);
             color: var(--tg-theme-button-text-color, #ffffff);
             border: none;
@@ -38,11 +83,24 @@
             font-weight: bold;
             cursor: pointer;
         }
+        .empty-msg {
+            text-align: center;
+            color: var(--tg-theme-hint-color, #777);
+            margin-top: 30px;
+        }
     </style>
 </head>
 <body>
 
     <h2>Каталог товаров</h2>
+
+    <!-- Поле поиска -->
+    <input type="text" id="searchInput" class="search-box" placeholder="🔍 Поиск по названию..." oninput="filterProducts()">
+
+    <!-- Категории товаров (подразделения) -->
+    <div class="categories-container" id="categories"></div>
+
+    <!-- Список товаров -->
     <div id="catalog"></div>
 
     <script>
@@ -52,40 +110,103 @@
         // ⚠️ ЗАМЕНИ НА ЮЗЕРНЕЙМ ТВОЕГО МЕНЕДЖЕРА (БЕЗ СОБАЧКИ @)
         const MANAGER_USERNAME = "manager_AVTO_TUN";
 
-        // Массив товаров
+        // Массив категорий ("all" - обязательная категория для показа всех товаров)
+        const categories = [
+            { id: "all", name: "Все" },
+            { id: "vaz2114", name: "ВАЗ 2114" },
+            { id: "optics", name: "Оптика и фары" },
+            { id: "body", name: "Обвесы и бамперы" }
+        ];
+
+        // Массив товаров с добавленным полем category
         const products = [
             {
                 id: 1,
                 name: "Решетка радиатора ВАЗ 2114",
+                category: "vaz2114",
                 price: "1 500 ₽",
-                image: "https://via.placeholder.com/300x200?text=Товар+1"
+                image: "https://via.placeholder.com/300x200?text=Решетка+2114"
             },
             {
                 id: 2,
                 name: "Фары противотуманные (ПТФ)",
+                category: "optics",
                 price: "2 300 ₽",
-                image: "https://via.placeholder.com/300x200?text=Товар+2"
+                image: "https://via.placeholder.com/300x200?text=ПТФ+Фары"
+            },
+            {
+                id: 3,
+                name: "Бампер передний Сport",
+                category: "body",
+                price: "4 500 ₽",
+                image: "https://via.placeholder.com/300x200?text=Бампер"
             }
         ];
 
-        const container = document.getElementById('catalog');
+        let selectedCategory = "all";
 
-        products.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'product-card';
-            card.innerHTML = `
-                <img src="${item.image}" class="product-img">
-                <div class="product-title">${item.name}</div>
-                <div class="product-price">${item.price}</div>
-                <button onclick="orderProduct('${item.name}')">Купить / Написать менеджеру</button>
-            `;
-            container.appendChild(card);
-        });
+        // Рендер кнопок категорий
+        function renderCategories() {
+            const catContainer = document.getElementById('categories');
+            catContainer.innerHTML = '';
+
+            categories.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = `category-btn ${cat.id === selectedCategory ? 'active' : ''}`;
+                btn.innerText = cat.name;
+                btn.onclick = () => {
+                    selectedCategory = cat.id;
+                    renderCategories();
+                    filterProducts();
+                };
+                catContainer.appendChild(btn);
+            });
+        }
+
+        // Фильтрация и вывод товаров
+        function filterProducts() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            const container = document.getElementById('catalog');
+            container.innerHTML = '';
+
+            const filtered = products.filter(item => {
+                const matchesCategory = (selectedCategory === "all" || item.category === selectedCategory);
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery);
+                return matchesCategory && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-msg">Ничего не найдено</div>';
+                return;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                
+                // Находим название категории
+                const catObj = categories.find(c => c.id === item.category);
+                const catName = catObj ? catObj.name : '';
+
+                card.innerHTML = `
+                    <img src="${item.image}" class="product-img" alt="${item.name}">
+                    <div class="product-title">${item.name}</div>
+                    <div class="product-category">Категория: ${catName}</div>
+                    <div class="product-price">${item.price}</div>
+                    <button class="order-btn" onclick="orderProduct('${item.name}')">Купить / Написать менеджеру</button>
+                `;
+                container.appendChild(card);
+            });
+        }
 
         function orderProduct(title) {
             const msg = encodeURIComponent(`Здравствуйте! Меня интересует товар: "${title}". Расскажите про наличие.`);
-            tg.openTelegramLink(`https://t.me/${manager_AVTO_TUN}?text=${msg}`);
+            tg.openTelegramLink(`https://t.me/${MANAGER_USERNAME}?text=${msg}`);
         }
+
+        // Первоначальная инициализация
+        renderCategories();
+        filterProducts();
     </script>
 </body>
 </html>
