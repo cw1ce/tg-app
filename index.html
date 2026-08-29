@@ -201,7 +201,7 @@
 
         function orderProduct(title) {
     const msg = encodeURIComponent(`Здравствуйте! Меня интересует товар: "${title}". Расскажите про наличие.`);
-    const directUrl = `https://t.me/${MANAGER_USERNAME}?text=${msg}`;
+    const directUrl = `https://t.me/${manager_AVTO_TUN}?text=${msg}`;
 
     tg.openTelegramLink(directUrl);
     tg.close(); // Закрывает Mini App
